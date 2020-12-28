@@ -1,5 +1,17 @@
+"""
+Temporary module containing Supremica's WMOD data structures interactions
+
+Includes the following classes:
+    Event
+    EventList
+    Component
+    ComponentList
+    Module
+"""
+
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
+from automata import *
 
 
 class Event:
@@ -34,29 +46,42 @@ class Component:
         self.name = name
         self.kind = kind
 
+        self.root = ET.Element("SimpleComponent")
+        self.root.set("Name", self.name)
+        self.root.set("Kind", self.kind)
+
     def toXML(self):
 
-        c = ET.Element("SimpleComponent")
-        c.set("Name", self.name)
-        c.set("Kind", self.kind)
+        
+        return self.root
 
-        graph = ET.SubElement(c,"Graph")
+    def Build(self, automaton):
+
+        graph = ET.SubElement(self.root,"Graph")
 
         nodeList = ET.SubElement(graph,"NodeList")
-        node = ET.SubElement(nodeList,"SimpleNode")
-        node.set("Name","s0")
-        node.set("Initial", "true")
+        for state in automaton.states:
+            node = ET.SubElement(nodeList,"SimpleNode")
+            node.set("Name",state.name)
+            if(state.initial):
+                node.set("Initial", "true")
+            if(state.accepting):
+                eventList = ET.SubElement(node,"EventList")
+                identifier = ET.SubElement(eventList,"SimpleIdentifier")
+                identifier.set("Name",":accepting")
 
+        
         edgeList = ET.SubElement(graph,"EdgeList")
-        edge = ET.SubElement(edgeList,"Edge")
-        edge.set("Source", "s0")
-        edge.set("Target", "s0")
+        for source in automaton.edges.keys():
+            for target in automaton.edges[source].keys():
+                edge = ET.SubElement(edgeList,"Edge")
+                edge.set("Source", source)
+                edge.set("Target", target)
 
-        label = ET.SubElement(edge,"LabelBlock")
-        iden = ET.SubElement(label,"SimpleIdentifier")
-        iden.set("Name","event0")
-
-        return c
+                for label in automaton.edges[source][target]:
+                    labelBlock = ET.SubElement(edge,"LabelBlock")
+                    eventLabel = ET.SubElement(labelBlock,"SimpleIdentifier")
+                    eventLabel.set("Name",label)
 
 class ComponentList:
     def __init__(self, *components):
