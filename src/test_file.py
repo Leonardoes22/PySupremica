@@ -21,13 +21,15 @@ aut.addEdge("S1","S1",ga.newEvent("b"))
 aut.addEventToEdge("S1","S2",ga.newEvent("c"))
 aut.setEdgeGuard("S1", "S2", "x>5 & x<9")
 aut.setEdgeGuard("S1", "S1", "(y>5 & y<9) & (x>0 & x<50)")
-aut.setEdgeActions("S1", "S2", "x+=2;y-=x")
+#aut.setEdgeActions("S1", "S2", "x+=2;y-=x")
+
+aut.addTransition("S1","S2",ga.newEvent("HOHJO"))
 
 mod.automata["Aut"] = aut
 mod.alphabet = ga
 mod.comment = "This is a module from PySupremica"
 
-mod.toWMOD("gen/MEGAsupsuGUARD")
+mod.toWMOD("gen/DoubleEDGE")
 
 ##############################
 #    Variable Sized Buffer   

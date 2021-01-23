@@ -16,10 +16,11 @@ from parsing_algorithm import *
 
 class Automaton:
 
-    def __init__(self):
+    def __init__(self,kind="PLANT"):
         self.states = []
         self.edges = {}
         self.alphabet = set()
+        self.kind = kind
 
     def addState(self, name, **kwargs):
         s = self.State(name, **kwargs)
@@ -28,35 +29,34 @@ class Automaton:
 
     def addEdge(self,source,target,event):
 
-
         if source in self.edges.keys():
             if target in self.edges[source].keys():
-                print("Edge from {} to {} already created".format(source,target))
-                return 
+                print("Edge from {} to {} already created, adding transition.".format(source,target))
+                self.addTransition(source,target,event) 
 
             else:
-                edge = {}
-                edge["label"] = [event]
-                self.edges[source][target] = edge
+                
+                self.edges[source][target] = [self.Transition(source,target,event)]
 
         else:
             targetDict = {}
-            edge = {}
-
-            edge["label"] = [event]
-            targetDict[target] = edge
+            
+            targetDict[target] = [self.Transition(source,target,event)]
             self.edges[source] = targetDict
 
         self.alphabet.add(event)
 
-    def addEventToEdge(self,source,target,event):
-        self.edges[source][target]["label"].append(event)
+    def addTransition(self, source, target, event):
+        self.edges[source][target].append(self.Transition(source,target,event))
 
-    def setEdgeGuard(self,source,target,guard):
-        self.edges[source][target]["guard"] = guard
+    def addEventToEdge(self,source,target,event, index=0):
+        self.edges[source][target][index].addEvent(event)
+
+    def setEdgeGuard(self,source,target,guard, index=0):
+        self.edges[source][target][index].setGuard(guard)
     
-    def setEdgeActions(self,source,target, actions):
-        self.edges[source][target]["actions"] = actions
+    def setEdgeActions(self,source,target, actions, index=0):
+        self.edges[source][target][index].setActions(actions)
 
 
     class State:
@@ -68,16 +68,44 @@ class Automaton:
             self.accepting = kwargs.get("accepting",False)
 
 
+    class Transition:
+
+        def __init__(self, source, target, event):
+
+            self.source = source
+            self.target = target
+            self.events = {event.name: event}
+            self.guard = None
+            self.actions = None
+
+        def setGuard(self, guard):
+            self.guard = guard
+
+        def setActions(self, actions):
+            self.actions = actions
+
+        def addEvent(self, event):
+            
+            if event.name not in self.events:
+                self.events[event.name] = event
+            else:
+                print("There is already an event named {}, please modify it or choose another name.".format(event.name))
+
+
 class Alphabet:
 
 
     def __init__(self):
-        self.alphabet = set()
+        self.alphabet = dict()
     
     def newEvent(self,name, kind="CONTROLLABLE", observable=True):
-        e = self.Event(name, kind, observable)
-        self.alphabet.add(e)
-        return e
+        if(name not in self.alphabet.keys()):
+            e = self.Event(name, kind, observable)
+            self.alphabet[name] = e
+            return e
+        else:
+            print("An event named {} was already created, please edit it or choose another name.".format(name))
+        
 
     def __call__(self):
         return self.alphabet
@@ -144,7 +172,8 @@ class Module:
         # Add alphabet
         eventDeclList = ET.SubElement(root,"EventDeclList")
         self.alphabet.newEvent(":accepting","PROPOSITION")
-        for event in self.alphabet():
+        for eventKey in self.alphabet():
+            event = self.alphabet()[eventKey]
             eventDecl = ET.SubElement(eventDeclList,"EventDecl")
             eventDecl.set("Kind", event.kind)
             eventDecl.set("Name", event.name)
@@ -155,7 +184,7 @@ class Module:
         for aut in self.automata:
             simpleComponent = ET.SubElement(componentList,"SimpleComponent")
             simpleComponent.set("Name",aut)
-            simpleComponent.set("Kind","PLANT")
+            simpleComponent.set("Kind", self.automata[aut].kind)
             graph = ET.SubElement(simpleComponent,"Graph")
 
             nodeList = ET.SubElement(graph,"NodeList")
@@ -176,27 +205,28 @@ class Module:
             edgeList = ET.SubElement(graph,"EdgeList")
             for source in automaton.edges.keys():
                 for target in automaton.edges[source].keys():
-                    edge = ET.SubElement(edgeList,"Edge")
-                    edge.set("Source", source)
-                    edge.set("Target", target)
+                    for transition in automaton.edges[source][target]:
+                        edge = ET.SubElement(edgeList,"Edge")
+                        edge.set("Source", source)
+                        edge.set("Target", target)
 
-                    labelBlock = ET.SubElement(edge,"LabelBlock")
-                    for label in automaton.edges[source][target]["label"]:
-                        eventLabel = ET.SubElement(labelBlock,"SimpleIdentifier")
-                        eventLabel.set("Name",label.name)
+                        labelBlock = ET.SubElement(edge,"LabelBlock")
+                        for label in transition.events:
+                            eventLabel = ET.SubElement(labelBlock,"SimpleIdentifier")
+                            eventLabel.set("Name",label)
 
 
-                    has_guard = "guard" in automaton.edges[source][target].keys()
-                    has_actions = "actions" in automaton.edges[source][target].keys()
-                    if (has_actions or has_guard):
-                        guardActionBlock = ET.SubElement(edge,"GuardActionBlock")
-                        
-                        if(has_guard):
-                            guards = ET.SubElement(guardActionBlock,"Guards")
-                            guards.append(GuardExpression(automaton.edges[source][target]["guard"]))
-                        if(has_actions):
-                            actions = ET.SubElement(guardActionBlock,"Actions")
-                            pass
+                        has_guard = transition.guard is not None
+                        has_actions = transition.actions  is not None
+                        if (has_actions or has_guard):
+                            guardActionBlock = ET.SubElement(edge,"GuardActionBlock")
+                            
+                            if(has_guard):
+                                guards = ET.SubElement(guardActionBlock,"Guards")
+                                guards.append(GuardExpression(transition.guard))
+                            if(has_actions):
+                                actions = ET.SubElement(guardActionBlock,"Actions")
+                                pass
                     
 
         # Add variables
