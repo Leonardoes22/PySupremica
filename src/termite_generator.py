@@ -220,8 +220,8 @@ e_m.setEdgeGuard("S0","S0",d_guard,3)
 
 mod.automata["E_M"] = e_m
 
-print(u_guard)
-print(parse_expression(u_guard))
+#print(u_guard)
+#print(parse_guard(u_guard))
 
 #  Generate
 

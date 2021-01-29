@@ -276,7 +276,7 @@ def buildBinExpLeaf(parentTree, parentBinExp):
 def GuardExpression(exp):
     
     if(isinstance(exp,str)):
-        tree = parse_expression(exp)
+        tree = parse_guard(exp)
     else:
         tree = exp
     
@@ -284,9 +284,9 @@ def GuardExpression(exp):
     binExp = ET.Element("BinaryExpression")
     binExp.set("Operator",tree[1])
 
+    print("ARve:",tree)
     if(isinstance(tree[0],type(tree)) or isinstance(tree[2],type(tree))):
         
-
         binExp.append(GuardExpression(tree[0]))
         binExp.append(GuardExpression(tree[2]))
 

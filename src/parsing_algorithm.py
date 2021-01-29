@@ -2,22 +2,36 @@
 import pyparsing as pp
 
 operator = pp.Regex(">=|<=|!=|>|<|==").setName("operator")
+actionOperator = pp.Regex("\+|-")
+actionAssigner = pp.Regex("=|\+=|-=")
 
 integer = pp.Regex(r"[+-]?\d+")
 identifier = pp.Word(pp.alphas + "_.", pp.alphanums + "_.")
-
 comparison_term = identifier | integer 
-condition = pp.Group(comparison_term + operator + comparison_term)
 
-expr = pp.operatorPrecedence(condition,[
+
+actionOperation = pp.Group(comparison_term + actionOperator + comparison_term)
+
+attribution = pp.Group(identifier + actionAssigner + (actionOperation|comparison_term))
+condition = pp.Group((actionOperation|comparison_term) + operator + (actionOperation|comparison_term))
+
+guardExp = pp.operatorPrecedence(condition,[
                             ("&", 2, pp.opAssoc.LEFT, ),
-                            ("|", 2, pp.opAssoc.LEFT, ),
+                            ("|", 2, pp.opAssoc.LEFT, )
                             ])
 
+actionExp = pp.operatorPrecedence(attribution, [(";",2,pp.opAssoc.LEFT, )])
 
-def parse_expression(exp):
+#print(guardExp.parseString("h1.1"))
 
-    return expr.parseString(exp)[0]
+
+def parse_guard(exp):
+    print("Text:   ",exp)
+    return guardExp.parseString(exp)[0]
+
+def parse_action(exp):
+
+    return actionExp.parseString(exp)[0]
 
 def isInt(str):
 
@@ -28,13 +42,13 @@ def isInt(str):
         return False
 
 
-
+'''
 test = "((y == 1 &  x == 1)  & ((-1 <= h11 - h21)  &  (h11 - h21 <= 1))) | ((y == 1 &  x == 2)  & ((-1 <= h12 - h22)  &  (h12 - h22 <= 1)))"
 test2 = "(y == 1 &  x == 1)"
 test3 = "((y == 0 & x == 0) & (0 == h11)) |  ((y == 1 & x == 2) & (h12 == h11)) | ((y == 2 & x == 1) & (h21 == h11))"
-test4 = "(y == 0 & (h11 - h21))"
+test4 = "-1 <= h21"
 
-tree = parse_expression(test4)
+tree = parse_guard(test4)
 
 
 def printTree(tree, it=0):
@@ -51,5 +65,6 @@ def printTree(tree, it=0):
         
 
 
-printTree(tree)
-print(tree)
+#printTree(tree)
+#print(tree)
+'''
