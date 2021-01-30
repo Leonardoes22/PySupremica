@@ -2,5 +2,6 @@ Templates/
 gen/
 __pycache__/
 py_supremica_env/
+deprecated/
 
 
