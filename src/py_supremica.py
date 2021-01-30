@@ -223,10 +223,11 @@ class Module:
                             
                             if(has_guard):
                                 guards = ET.SubElement(guardActionBlock,"Guards")
-                                guards.append(GuardExpression(transition.guard))
+                                guards.append(guardExpression(transition.guard))
                             if(has_actions):
                                 actions = ET.SubElement(guardActionBlock,"Actions")
-                                pass
+                                for action in actionExpression(transition.actions):
+                                    actions.append(action)
                     
 
         # Add variables
@@ -248,7 +249,7 @@ class Module:
                     operand.set("Name",variable["range"][i])
                 
             initial = ET.SubElement(variableComponent,"VariableInitial")
-            initial.append(GuardExpression(variable["initial"]))
+            initial.append(guardExpression(variable["initial"]))
 
 
         # Export to File
@@ -263,38 +264,74 @@ class Module:
 
 
 
-def buildBinExpLeaf(parentTree, parentBinExp):
-    for i in range(3):
-            if(i!=1 ):
-                if(isInt(parentTree[i])):
-                    operand = ET.SubElement(parentBinExp, "IntConstant")
-                    operand.set("Value",str(parentTree[i]))
-                else:
-                    operand = ET.SubElement(parentBinExp, "SimpleIdentifier")
-                    operand.set("Name",parentTree[i])
+def buildBinExpLeaf(leaf):
+    if(isInt(leaf)):
+        operand = ET.Element("IntConstant")
+        operand.set("Value",str(leaf))
+    else:
+        operand = ET.Element("SimpleIdentifier")
+        operand.set("Name",leaf)
+    return operand
+    
 
-def GuardExpression(exp):
+
+def guardExpression(exp):
     
     if(isinstance(exp,str)):
         tree = parse_guard(exp)
     else:
         tree = exp
-    
 
     binExp = ET.Element("BinaryExpression")
     binExp.set("Operator",tree[1])
 
-    print("ARve:",tree)
-    if(isinstance(tree[0],type(tree)) or isinstance(tree[2],type(tree))):
-        
-        binExp.append(GuardExpression(tree[0]))
-        binExp.append(GuardExpression(tree[2]))
-
-
-    else:
-
-        buildBinExpLeaf(tree,binExp)
-        
+    for i in range(3):
+        if(i!=1):
+            if(isinstance(tree[i],type(tree))):
+                binExp.append(guardExpression(tree[i]))
+            else:
+                binExp.append(buildBinExpLeaf(tree[i]))
 
     return binExp
 
+def actionExpression(exp):
+
+    tree = parse_action(exp)
+
+    if(tree[1]==";"): # If multi
+        actions = []
+        for item in tree:
+            if(item != ";"):
+                actions.append(binaryExpression(item,"action"))
+
+        return actions
+    else: 
+        return [binaryExpression(tree,"action")]
+
+
+    
+def binaryExpression(exp, expType):
+
+    if(isinstance(exp,str)):
+        if(expType == "guard"):
+            tree = parse_guard(exp)
+        elif(expType == "action"):
+            tree = parse_action(exp)
+    else:
+        tree = exp
+
+
+    binExp = ET.Element("BinaryExpression")
+    binExp.set("Operator",tree[1])
+    for i in range(3):
+        if(i!=1):
+            if(isinstance(tree[i],type(tree))):
+                binExp.append(binaryExpression(tree[i], expType))
+            else:
+                binExp.append(buildBinExpLeaf(tree[i]))
+
+    return binExp
+
+
+#print(parse_guard("(x==1 & y==2)|(x==2 & y==1)|(x==0 & y==0)"))
+guardExpression("(x==1 & y==2)|(x==2 & y==1)|(x==0 & y==0)")

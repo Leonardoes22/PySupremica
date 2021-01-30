@@ -22,15 +22,21 @@ guardExp = pp.operatorPrecedence(condition,[
 
 actionExp = pp.operatorPrecedence(attribution, [(";",2,pp.opAssoc.LEFT, )])
 
-#print(guardExp.parseString("h1.1"))
 
 
 def parse_guard(exp):
-    print("Text:   ",exp)
-    return guardExp.parseString(exp)[0]
+
+    post_guard = guardExp.parseString(exp)[0]
+
+    while(len(post_guard) > 3):
+
+        fusion = pp.ParseResults(post_guard[0:3])
+        post_guard = pp.ParseResults(post_guard[3:])
+        post_guard.insert(0,fusion)
+
+    return post_guard
 
 def parse_action(exp):
-
     return actionExp.parseString(exp)[0]
 
 def isInt(str):
@@ -42,14 +48,9 @@ def isInt(str):
         return False
 
 
+
+
 '''
-test = "((y == 1 &  x == 1)  & ((-1 <= h11 - h21)  &  (h11 - h21 <= 1))) | ((y == 1 &  x == 2)  & ((-1 <= h12 - h22)  &  (h12 - h22 <= 1)))"
-test2 = "(y == 1 &  x == 1)"
-test3 = "((y == 0 & x == 0) & (0 == h11)) |  ((y == 1 & x == 2) & (h12 == h11)) | ((y == 2 & x == 1) & (h21 == h11))"
-test4 = "-1 <= h21"
-
-tree = parse_guard(test4)
-
 
 def printTree(tree, it=0):
 
@@ -61,8 +62,18 @@ def printTree(tree, it=0):
             printTree(e,it=it+1)
 
 
+tree = parse_guard("(x==1 & y==2)&(x==2 & y==1)|(x==0 & y==0)|(x==0 & y==0)")
 
-        
+printTree(tree)
+print(len(tree[0][0][0][0][0][0]))
+
+
+test = "((y == 1 &  x == 1)  & ((-1 <= h11 - h21)  &  (h11 - h21 <= 1))) | ((y == 1 &  x == 2)  & ((-1 <= h12 - h22)  &  (h12 - h22 <= 1)))"
+test2 = "(y == 1 &  x == 1)"
+test3 = "((y == 0 & x == 0) & (0 == h11)) |  ((y == 1 & x == 2) & (h12 == h11)) | ((y == 2 & x == 1) & (h21 == h11))"
+test4 = "-1 <= h21"
+
+tree = parse_guard(test4)
 
 
 #printTree(tree)
