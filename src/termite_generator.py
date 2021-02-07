@@ -22,12 +22,19 @@ def inGrid(coord):
     else:
         return True
 
+def neighborhoodIn(coord):
+    neigh = []
+    for n in neighborhood(coord):
+        if (inGrid(n)):
+            neigh.append(n)
+    return neigh
+
 ###
 # Setup 
 ###
 
 # File name
-fileName = "sup 3x3"
+fileName = "gen/Sup_3x3alskjdlakdsj"
 
 # Structure
 
@@ -61,7 +68,7 @@ outTiles = [(1,3)]
 largura = len(heightMap)
 comprimento = len(heightMap[0])
 
-mod = Module("Sup_1x2")
+mod = Module("sup")
 mod.comment = "First Supervisor Test"
 
 ga = Alphabet()
@@ -94,7 +101,7 @@ for i in range(1,largura+1):
 
         # Set addTile Events
         ga.newEvent("a"+coordEnc(i,j))
-        #ga.newEvent("a"+coordEnc(i,j) + "_r2", kind="CONTROLLABLE")
+        ga.newEvent("a"+coordEnc(i,j) + "_r2", kind="CONTROLLABLE")
 
         # Set height variables
         mod.addVariable("h"+coordEnc(i,j),"h"+coordEnc(i,j)+ "==0", [0,heightMap[i-1][j-1]+1])
@@ -148,11 +155,12 @@ g_b.addState("S1",accepting=True)
 g_b.addEdge("S0","S1", ga()["getBrick"])
 g_b.addEdge("S1","S0", ga()["a11"])
 
-
 for i in range(1,largura+1):
     for j in range(1,comprimento+1):
-        if(i != 1 and j  != 1):
+        if(not (i == 1 and j  == 1)):
             g_b.addEventToEdge("S1","S0", ga()["a"+coordEnc(i,j)])
+
+            
 
 mod.automata["G_B"] = g_b
 
@@ -164,8 +172,8 @@ for i in range(1,largura+1):
     gadd_ix = Automaton()
     gadd_ix.addState("L1", initial=True, accepting=True)
 
-    #gadd_ix_r2 = Automaton()
-    #gadd_ix_r2.addState("L1", initial=True, accepting=True)
+    gadd_ix_r2 = Automaton()
+    gadd_ix_r2.addState("L1", initial=True, accepting=True)
 
     for j in range(1,comprimento+1):
 
@@ -182,11 +190,11 @@ for i in range(1,largura+1):
 
         gadd_ix.setEdgeGuard("L1","L1",guard,j-1)
 
-        #gadd_ix_r2.addEdge("L1","L1",ga()["a"+coordEnc(i,j)+"_r2"])
-        #gadd_ix_r2.setEdgeActions("L1","L1","h"+coordEnc(i,j)+"+=1",j-1)
+        gadd_ix_r2.addEdge("L1","L1",ga()["a"+coordEnc(i,j)+"_r2"])
+        gadd_ix_r2.setEdgeActions("L1","L1","h"+coordEnc(i,j)+"+=1",j-1)
 
     mod.automata["GAdd_"+str(i)+"X"] = gadd_ix
-    #mod.automata["GAdd_"+str(i)+"X_r2"] = gadd_ix_r2
+    mod.automata["GAdd_"+str(i)+"X_r2"] = gadd_ix_r2
 
 
 
@@ -194,30 +202,32 @@ for i in range(1,largura+1):
 # Specifications
 ###
 
-# E_Hij and E_aij
+# E_Hij, E_aij and E_Uij
 
 for i in range(1,largura+1):
 
     for j in range(1,comprimento+1):
 
+        # E_Hij
         e_hij = Automaton(kind="SPEC")
         e_hij.addState("B0", initial=True)
         e_hij.addState("B1", accepting=True)
 
         e_hij.addEdge("B0","B0",ga()["a"+coordEnc(i,j)])
-        #e_hij.addEventToEdge("B0","B0", ga()["a"+coordEnc(i,j)+"_r2"])
+        e_hij.addEventToEdge("B0","B0", ga()["a"+coordEnc(i,j)+"_r2"])
         e_hij.setEdgeGuard("B0","B0","h"+coordEnc(i,j)+"<"+"H"+coordEnc(i,j)+"-1")
 
         e_hij.addEdge("B0","B1",ga()["a"+coordEnc(i,j)])
-        #e_hij.addEventToEdge("B0","B1", ga()["a"+coordEnc(i,j)+"_r2"])
+        e_hij.addEventToEdge("B0","B1", ga()["a"+coordEnc(i,j)+"_r2"])
         e_hij.setEdgeGuard("B0","B1","h"+coordEnc(i,j)+"=="+"H"+coordEnc(i,j)+"-1")
 
         mod.automata["E_H"+coordEnc(i,j)] = e_hij
 
+        #E_aij
         e_aij = Automaton(kind="SPEC")
         e_aij.addState("S0", initial=True, accepting=True)
         e_aij.addEdge("S0","S0",ga()["a"+coordEnc(i,j)])
-        #e_aij.addEventToEdge("S0","S0",ga()["a"+coordEnc(i,j)+"_r2"])
+        e_aij.addEventToEdge("S0","S0",ga()["a"+coordEnc(i,j)+"_r2"])
 
         guard = ""
         for n in neighborhood((i,j)):
@@ -231,8 +241,29 @@ for i in range(1,largura+1):
 
         mod.automata["E_a"+coordEnc(i,j)] = e_aij
 
+        #E_Uij
+
+        n_i = (i-1,j) in neighborhoodIn((i,j)) and (i+1,j) in neighborhoodIn((i,j))
+        n_j = (i,j-1) in neighborhoodIn((i,j)) and (i,j+1) in neighborhoodIn((i,j))
+
+        if( n_i or n_j):
+            e_uij = Automaton(kind="SPEC")
+            e_uij.addState("S0",initial=True, accepting=True)
+            e_uij.addEdge("S0","S0",ga()["a"+coordEnc(i,j)])
+            e_uij.addEventToEdge("S0","S0",ga()["a"+coordEnc(i,j)+"_r2"])
+            guard = ""
+            if(n_i):
+                guard += "(h"+coordEnc(i,j)+" >= h"+coordEnc(i-1,j)+"  |  h"+coordEnc(i,j)+" >= h"+coordEnc(i+1,j)+")&"
+            if(n_j):
+                guard += "(h"+coordEnc(i,j)+" >= h"+coordEnc(i,j-1)+"  |  h"+coordEnc(i,j)+" >= h"+coordEnc(i,j+1)+")"
+            e_uij.setEdgeGuard("S0","S0",guard)
+
+            mod.automata["E_U"+coordEnc(i,j)] = e_uij
+
+
 
 # E_M
+
 
 e_m = Automaton(kind="SPEC")
 e_m.addState("S0",initial = True, accepting =True)
