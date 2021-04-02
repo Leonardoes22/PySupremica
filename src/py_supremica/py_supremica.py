@@ -12,7 +12,7 @@ Includes the following classes:
 
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
-from parsing_algorithm import *
+from py_supremica.parsing_algorithm import *
 
 class Automaton:
 
@@ -44,7 +44,11 @@ class Automaton:
             targetDict[target] = [self.Transition(source,target,event)]
             self.edges[source] = targetDict
 
-        self.alphabet.add(event)
+        if isinstance(event, list):
+            for e in event:
+                self.alphabet.add(e)
+        else:
+            self.alphabet.add(event)
 
     def addTransition(self, source, target, event):
         self.edges[source][target].append(self.Transition(source,target,event))
@@ -74,7 +78,16 @@ class Automaton:
 
             self.source = source
             self.target = target
-            self.events = {event.name: event}
+            if isinstance(event, list):
+                self.events = {}
+                for e in event:
+                    if e.name not in self.events:
+                        self.events[e.name] = e
+                    else:
+                        print("Duplicated event passed in the list was ignored")
+            else:
+                self.events = {event.name: event}
+
             self.guard = None
             self.actions = None
 
